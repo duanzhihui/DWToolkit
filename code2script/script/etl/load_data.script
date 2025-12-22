@@ -1,0 +1,12 @@
+{
+	"configuration": {},
+	"connectionName": "mrs-spark",
+	"content": "INSERT INTO target_table\\nSELECT \\n    id,\\n    name,\\n    email\\nFROM source_table\\nWHERE date = '${bizdate}';\\n",
+	"currentDatabase": "",
+	"description": "",
+	"directory": "/etl",
+	"name": "load_data",
+	"owner": "datalake",
+	"templateVersion": "1.0",
+	"type": "SparkSQL"
+}

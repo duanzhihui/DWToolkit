@@ -1,0 +1,12 @@
+{
+	"configuration": {},
+	"connectionName": "mrs-spark",
+	"content": "SELECT *\\nFROM users\\nWHERE status = 'active'\\nORDER BY created_at DESC;\\n",
+	"currentDatabase": "",
+	"description": "",
+	"directory": "/",
+	"name": "query1",
+	"owner": "datalake",
+	"templateVersion": "1.0",
+	"type": "SparkSQL"
+}
