@@ -376,6 +376,46 @@ class SQLTableParser:
         
         return content
     
+    def extract_variable_definitions(self, content: str, file_type: str) -> Dict[str, str]:
+        """
+        从文件内容中提取变量定义
+        
+        Args:
+            content: 文件内容
+            file_type: 文件类型 ('python' 或 'shell')
+            
+        Returns:
+            变量名到值的映射字典
+        """
+        variables = {}
+        
+        if file_type == 'python':
+            # Python 变量定义: VAR_NAME = "value" 或 VAR_NAME = 'value'
+            # 支持简单的字符串赋值
+            pattern = re.compile(
+                r'^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*["\']([^"\']*)["\']\s*$',
+                re.MULTILINE
+            )
+            for match in pattern.finditer(content):
+                var_name = match.group(1)
+                var_value = match.group(2)
+                variables[var_name] = var_value
+        
+        elif file_type == 'shell':
+            # Shell 变量定义: VAR_NAME="value" 或 VAR_NAME='value' 或 VAR_NAME=value
+            pattern = re.compile(
+                r'^\s*([A-Za-z_][A-Za-z0-9_]*)=["\']?([^"\'\n]*)["\']?\s*$',
+                re.MULTILINE
+            )
+            for match in pattern.finditer(content):
+                var_name = match.group(1)
+                var_value = match.group(2).strip()
+                # 排除包含 $( 或 ` 的命令替换
+                if '$(' not in var_value and '`' not in var_value:
+                    variables[var_name] = var_value
+        
+        return variables
+    
     def extract_tables_from_pattern(self, sql: str, pattern: re.Pattern) -> Set[str]:
         """
         使用指定的正则表达式模式提取表名
@@ -459,17 +499,23 @@ class SQLTableParser:
         
         return cte_names
     
-    def parse_sql(self, sql: str, preprocess: bool = True) -> Dict[str, Set[str]]:
+    def parse_sql(self, sql: str, preprocess: bool = True, var_definitions: Dict[str, str] = None) -> Dict[str, Set[str]]:
         """
         解析SQL代码，提取所有表名（剔除CTE临时表）
         
         Args:
             sql: SQL代码
             preprocess: 是否预处理移除非SQL代码（如Python import）
+            var_definitions: 变量定义字典，用于替换变量表名
             
         Returns:
             字典，键为SQL语句类型，值为表名集合
+            - variable_tables: Dict[str, str] 变量表名到替换后表名的映射
+            - 其他键: Set[str] 替换后的表名集合
         """
+        if var_definitions is None:
+            var_definitions = {}
+        
         # 移除非SQL代码（如Python import语句）
         if preprocess:
             sql = self.remove_non_sql_code(sql)
@@ -482,7 +528,7 @@ class SQLTableParser:
         
         result = {}
         all_tables = set()
-        variable_tables = set()  # 包含变量的表名
+        variable_tables_mapping = {}  # 变量表名 -> 替换后表名 的映射
         
         # 使用各种模式提取表名
         for pattern_name, pattern in self.patterns.items():
@@ -491,19 +537,25 @@ class SQLTableParser:
                 # 剔除CTE临时表
                 tables = tables - cte_names
                 if tables:
-                    result[pattern_name] = tables
-                    all_tables.update(tables)
-                    # 收集包含变量的表名
+                    resolved_tables = set()
                     for table in tables:
                         if self.contains_variable(table):
-                            variable_tables.add(table)
+                            # 替换变量表名
+                            resolved_table = self.replace_variables(table, var_definitions)
+                            variable_tables_mapping[table] = resolved_table
+                            resolved_tables.add(resolved_table)
+                        else:
+                            resolved_tables.add(table)
+                    
+                    result[pattern_name] = resolved_tables
+                    all_tables.update(resolved_tables)
         
-        # 添加所有表名的汇总
+        # 添加所有表名的汇总（替换后的表名）
         result['all_tables'] = all_tables
         
-        # 添加包含变量的表名
-        if variable_tables:
-            result['variable_tables'] = variable_tables
+        # 添加变量表名映射（原始变量表名 -> 替换后表名）
+        if variable_tables_mapping:
+            result['variable_tables'] = variable_tables_mapping
         
         # 添加CTE临时表信息（供参考）
         if cte_names:
@@ -514,12 +566,15 @@ class SQLTableParser:
     def parse_file(self, file_path: str) -> Dict[str, Set[str]]:
         """
         解析文件中的SQL代码，支持 *.sql, *.py, *.sh 文件
+        自动从文件中提取变量定义并替换变量表名
         
         Args:
             file_path: 文件路径（支持 .sql, .py, .sh 扩展名）
             
         Returns:
             字典，键为SQL语句类型，值为表名集合
+            - variable_tables: Dict[str, str] 变量表名到替换后表名的映射
+            - 其他键: Set[str] 替换后的表名集合
         """
         path = Path(file_path)
         
@@ -535,10 +590,18 @@ class SQLTableParser:
         with open(path, 'r', encoding='utf-8') as f:
             content = f.read()
         
-        # 对于 .py 和 .sh 文件，需要预处理移除非SQL代码
-        preprocess = suffix in {'.py', '.sh'}
+        # 对于 .py 和 .sh 文件，提取变量定义并预处理
+        var_definitions = {}
+        preprocess = False
         
-        return self.parse_sql(content, preprocess=preprocess)
+        if suffix == '.py':
+            var_definitions = self.extract_variable_definitions(content, 'python')
+            preprocess = True
+        elif suffix == '.sh':
+            var_definitions = self.extract_variable_definitions(content, 'shell')
+            preprocess = True
+        
+        return self.parse_sql(content, preprocess=preprocess, var_definitions=var_definitions)
     
     def format_result(self, result: Dict[str, Set[str]]) -> str:
         """
@@ -590,9 +653,15 @@ class SQLTableParser:
         for pattern_name, tables in result.items():
             if pattern_name != 'all_tables' and tables:
                 type_name = type_names.get(pattern_name, pattern_name)
-                lines.append(f"\n{type_name}: {len(tables)} 个表")
-                for table in sorted(tables):
-                    lines.append(f"  - {table}")
+                # variable_tables 是字典类型，需要特殊处理
+                if pattern_name == 'variable_tables' and isinstance(tables, dict):
+                    lines.append(f"\n{type_name}: {len(tables)} 个表")
+                    for var_table, resolved_table in sorted(tables.items()):
+                        lines.append(f"  - {var_table} -> {resolved_table}")
+                else:
+                    lines.append(f"\n{type_name}: {len(tables)} 个表")
+                    for table in sorted(tables):
+                        lines.append(f"  - {table}")
         
         lines.append("\n" + "=" * 60)
         
@@ -638,6 +707,7 @@ def main():
     
     #sql_file = "sample_queries.sql"
     sql_file = "sample_script.py"
+    #sql_file = "sample_script.sh"
     
     try:
         result = parser.parse_file(sql_file)

@@ -2,64 +2,62 @@
 SQL表名解析结果
 ============================================================
 
-【所有表名】 (共 14 个)
+【所有表名】 (共 13 个)
   - action_logs
   - dual
+  - dw.audit_logs
+  - dw.dim_products
+  - dw.dim_users
+  - dw.fact_orders
   - inventory
+  - ods.raw_users
   - order_items
   - orders
   - products
   - temp_cache
   - users
-  - {dw_schema}.{table_name}
-  - {ods_schema}.raw_users
-  - {schema}.audit_logs
-  - {schema}.{table_name}
-  - {schema}.{table_orders}
-  - {schema}.{table_users}
 
 【按SQL语句类型分类】
 
 SELECT FROM: 8 个表
   - dual
+  - dw.dim_products
+  - dw.dim_users
+  - ods.raw_users
   - order_items
   - products
   - temp_cache
   - users
-  - {ods_schema}.raw_users
-  - {schema}.{table_name}
-  - {schema}.{table_users}
 
 JOIN: 3 个表
+  - dw.dim_products
+  - dw.fact_orders
   - orders
-  - {dw_schema}.{table_name}
-  - {schema}.{table_orders}
 
 INSERT INTO/OVERWRITE: 2 个表
   - action_logs
-  - {schema}.audit_logs
+  - dw.audit_logs
 
 UPDATE: 2 个表
+  - dw.dim_products
   - inventory
-  - {schema}.{table_name}
 
 DELETE FROM: 2 个表
+  - dw.dim_products
   - temp_cache
-  - {schema}.{table_name}
 
 CREATE TABLE: 1 个表
-  - {schema}.{table_name}
+  - dw.dim_products
 
 TRUNCATE TABLE: 1 个表
-  - {schema}.{table_name}
+  - dw.dim_products
 
-变量表名: 6 个表
-  - {dw_schema}.{table_name}
-  - {ods_schema}.raw_users
-  - {schema}.audit_logs
-  - {schema}.{table_name}
-  - {schema}.{table_orders}
-  - {schema}.{table_users}
+变量表名: 5 个表
+  - {ods_schema}.raw_users -> ods.raw_users
+  - {schema}.audit_logs -> dw.audit_logs
+  - {schema}.{table_name} -> dw.dim_products
+  - {schema}.{table_orders} -> dw.fact_orders
+  - {schema}.{table_users} -> dw.dim_users
 
 CTE临时表（已剔除）: 1 个表
   - sales_summary

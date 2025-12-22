@@ -18,12 +18,12 @@ from sqlalchemy import create_engine, text
 
 
 # 变量表名配置 - 用于动态指定schema和表名
-SCHEMA_DW = "dw"
-SCHEMA_ODS = "ods"
-TABLE_USERS = "dim_users"
-TABLE_ORDERS = "fact_orders"
-TABLE_PRODUCTS = "dim_products"
-DATE_SUFFIX = datetime.now().strftime("%Y%m%d")
+# 这些变量会被 sql_table_parser 自动提取并用于替换 SQL 中的变量表名
+schema = "dw"
+ods_schema = "ods"
+table_users = "dim_users"
+table_orders = "fact_orders"
+table_name = "dim_products"
 
 
 def get_user_orders(engine, user_id: int):
@@ -52,7 +52,7 @@ def get_product_sales(engine):
     return pd.read_sql(sql, engine)
 
 
-def get_user_orders_with_variable_table(engine, user_id: int, schema: str, table_users: str, table_orders: str):
+def get_user_orders_with_variable_table(engine, user_id: int):
     """使用变量表名查询用户订单 - Python f-string 格式"""
     sql = f"""
     SELECT u.id, u.name, o.order_id, o.amount
@@ -63,20 +63,20 @@ def get_user_orders_with_variable_table(engine, user_id: int, schema: str, table
     return pd.read_sql(sql, engine, params={'user_id': user_id})
 
 
-def get_cross_schema_data(engine, ods_schema: str, dw_schema: str, table_name: str):
+def get_cross_schema_data(engine):
     """跨schema查询 - 混合变量和固定表名"""
     sql = f"""
     SELECT s.*, t.*
     FROM {ods_schema}.raw_users s
-    LEFT JOIN {dw_schema}.{table_name} t ON s.id = t.source_id
+    LEFT JOIN {schema}.{table_name} t ON s.id = t.source_id
     """
     return pd.read_sql(sql, engine)
 
 
-def create_partition_table(engine, schema: str, table_name: str, date_suffix: str):
+def create_partition_table(engine):
     """动态创建分区表"""
     sql = f"""
-    CREATE TABLE IF NOT EXISTS {schema}.{table_name}_{date_suffix} (
+    CREATE TABLE IF NOT EXISTS {schema}.{table_name} (
         id INT PRIMARY KEY,
         user_id INT,
         amount DECIMAL(10,2)
@@ -97,7 +97,7 @@ def update_inventory(engine, product_id: int, quantity: int):
         conn.execute(text(sql), {'qty': quantity, 'product_id': product_id})
 
 
-def update_variable_table(engine, schema: str, table_name: str):
+def update_variable_table(engine):
     """使用变量表名更新"""
     sql = f"""
     UPDATE {schema}.{table_name}
@@ -118,7 +118,7 @@ def log_action(engine, action: str):
         conn.execute(text(sql), {'action': action})
 
 
-def insert_to_variable_table(engine, schema: str, table_name: str):
+def insert_to_variable_table(engine):
     """使用变量表名插入数据"""
     sql = f"""
     INSERT INTO {schema}.audit_logs (action, table_name, executed_at)
@@ -138,7 +138,7 @@ def cleanup_old_data(engine):
         conn.execute(text(sql))
 
 
-def delete_from_variable_table(engine, schema: str, table_name: str):
+def delete_from_variable_table(engine):
     """使用变量表名删除数据"""
     sql = f"""
     DELETE FROM {schema}.{table_name}
@@ -148,7 +148,7 @@ def delete_from_variable_table(engine, schema: str, table_name: str):
         conn.execute(text(sql))
 
 
-def truncate_variable_table(engine, schema: str, table_name: str):
+def truncate_variable_table(engine):
     """使用变量表名清空表"""
     sql = f"""
     TRUNCATE TABLE {schema}.{table_name}
@@ -166,23 +166,21 @@ if __name__ == '__main__':
     print(orders)
     
     # 执行变量表名查询
-    orders_var = get_user_orders_with_variable_table(
-        engine, 1, SCHEMA_DW, TABLE_USERS, TABLE_ORDERS
-    )
+    orders_var = get_user_orders_with_variable_table(engine, 1)
     print(orders_var)
     
     # 跨schema查询
-    cross_data = get_cross_schema_data(engine, SCHEMA_ODS, SCHEMA_DW, TABLE_USERS)
+    cross_data = get_cross_schema_data(engine)
     print(cross_data)
     
     # 创建分区表
-    create_partition_table(engine, SCHEMA_DW, TABLE_ORDERS, DATE_SUFFIX)
+    create_partition_table(engine)
     
     # 更新变量表
-    update_variable_table(engine, SCHEMA_DW, TABLE_PRODUCTS)
+    update_variable_table(engine)
     
     # 插入到变量表
-    insert_to_variable_table(engine, SCHEMA_DW, TABLE_USERS)
+    insert_to_variable_table(engine)
     
     # 删除变量表数据
-    delete_from_variable_table(engine, SCHEMA_DW, TABLE_ORDERS)
+    delete_from_variable_table(engine)
