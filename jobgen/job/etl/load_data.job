@@ -1,0 +1,43 @@
+{
+    "id": "2",
+    "basicConfig": {
+        "name": "load_data",
+        "description": "",
+        "owner": "datalake",
+        "priority": 0,
+        "logPath": "/tmp/logs"
+    },
+    "nodes": [
+        {
+            "name": "load_data",
+            "type": "SparkSQL",
+            "location": {
+                "x": 100,
+                "y": 100
+            },
+            "preNodeName": [],
+            "properties": {
+                "connectionName": "mrs-spark",
+                "database": "",
+                "scriptPath": "/etl/load_data.script",
+                "scriptArgs": "",
+                "content": "INSERT INTO target_table\\nSELECT \\n    id,\\n    name,\\n    email\\nFROM source_table\\nWHERE date = '${bizdate}';\\n"
+            },
+            "resources": [],
+            "conditions": []
+        }
+    ],
+    "schedule": {
+        "type": "EXECUTE_ONCE",
+        "enabled": false,
+        "cron": {
+            "startTime": "",
+            "endTime": "",
+            "expression": "",
+            "dependPrePeriod": false
+        }
+    },
+    "params": [],
+    "directory": "/etl",
+    "processType": "BATCH"
+}

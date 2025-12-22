@@ -1,0 +1,43 @@
+{
+    "id": "<id>",
+    "basicConfig": {
+        "name": "<name>",
+        "description": "<description>",
+        "owner": "<owner>",
+        "priority": <priority>,
+        "logPath": "<logPath>"
+    },
+    "nodes": [
+        {
+            "name": "<name>",
+            "type": "SparkSQL",
+            "location": {
+                "x": 100,
+                "y": 100
+            },
+            "preNodeName": [],
+            "properties": {
+                "connectionName": "<connectionName>",
+                "database": "<currentDatabase>",
+                "scriptPath": "<directory>/<name>.script",
+                "scriptArgs": "",
+                "content": "<content>"
+            },
+            "resources": [],
+            "conditions": []
+        }
+    ],
+    "schedule": {
+        "type": "EXECUTE_ONCE",
+        "enabled": false,
+        "cron": {
+            "startTime": "",
+            "endTime": "",
+            "expression": "",
+            "dependPrePeriod": false
+        }
+    },
+    "params": [],
+    "directory": "<directory>",
+    "processType": "BATCH"
+}

@@ -1,0 +1,43 @@
+{
+    "id": "1",
+    "basicConfig": {
+        "name": "query1",
+        "description": "",
+        "owner": "datalake",
+        "priority": 0,
+        "logPath": "/tmp/logs"
+    },
+    "nodes": [
+        {
+            "name": "query1",
+            "type": "SparkSQL",
+            "location": {
+                "x": 100,
+                "y": 100
+            },
+            "preNodeName": [],
+            "properties": {
+                "connectionName": "mrs-spark",
+                "database": "",
+                "scriptPath": "//query1.script",
+                "scriptArgs": "",
+                "content": "SELECT *\\nFROM users\\nWHERE status = 'active'\\nORDER BY created_at DESC;\\n"
+            },
+            "resources": [],
+            "conditions": []
+        }
+    ],
+    "schedule": {
+        "type": "EXECUTE_ONCE",
+        "enabled": false,
+        "cron": {
+            "startTime": "",
+            "endTime": "",
+            "expression": "",
+            "dependPrePeriod": false
+        }
+    },
+    "params": [],
+    "directory": "/",
+    "processType": "BATCH"
+}

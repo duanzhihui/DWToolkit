@@ -1,0 +1,44 @@
+# JobGen 配置文件
+
+# 输入配置
+input:
+  # script文件目录
+  script_dir: "../code2script/script"
+  # 文件过滤规则
+  pattern: "*.script"
+
+# 输出配置
+output:
+  # job文件输出目录
+  job_dir: "./job"
+
+# 模板配置
+template:
+  # job模板文件路径
+  file: "./template.job"
+
+# 变量配置
+variables:
+  # id自增长初始值
+  id_start: 1
+  # 自定义变量 (可在模板中使用 <变量名> 引用)
+  custom:
+    # 示例: logPath: "/custom/logs"
+    logPath: "/tmp/logs"
+    priority: 0
+
+# 转换规则
+# 支持从script字段映射到job模板变量
+# 格式: 模板变量名: script字段名 或 固定值
+mappings:
+  # 直接映射 (模板变量名与script字段名相同时自动映射)
+  # name: name
+  # description: description
+  # owner: owner
+  # connectionName: connectionName
+  # currentDatabase: currentDatabase
+  # directory: directory
+  # content: content
+  
+  # 自定义映射示例
+  # database: currentDatabase
