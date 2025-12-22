@@ -17,13 +17,15 @@ class SQLTableParser:
     def __init__(self):
         """初始化解析器，定义各种SQL语句的正则表达式模式"""
         
-        # 表名模式：支持 table, schema.table, `table`, "table" 等格式
-        # self.table_pattern = r'(?:`[^`]+`|"[^"]+"|[\w]+\.[\w]+|[\w]+)'
-
-        # 表名模式：支持 table, schema.table, `table`, "table", {schema_var}.{table_var} {schema_var}.table schema.{table_var} 等格式
+        # 表名模式：支持多种变量格式
+        # - 普通表名: table, schema.table
+        # - 引号表名: `table`, "table"
+        # - Python变量: {var}, {schema}.{table}
+        # - Shell变量: ${var}, $var, ${schema}.${table}
         IDENT = r'(?:`[^`]+`|"[^"]+"|\w+)'     # `..` 或 ".." 或 \w+
-        VAR   = r'\{[A-Za-z_]\w*\}'            # {var_name}
-        PART  = rf'(?:{IDENT}|{VAR})'          # 单段：标识符或变量
+        PY_VAR = r'\{[A-Za-z_]\w*\}'            # Python: {var_name}
+        SH_VAR = r'(?:\$\{[A-Za-z_]\w*\}|\$[A-Za-z_]\w*)'  # Shell: ${var} 或 $var
+        PART = rf'(?:{IDENT}|{PY_VAR}|{SH_VAR})'  # 单段：标识符或变量
         self.table_pattern = rf'(?:{PART})(?:\.(?:{PART}))?'
         
         # 匹配单个CTE名称的正则表达式 (参考 cte_parser.py)
@@ -184,9 +186,117 @@ class SQLTableParser:
         
         return table_name
     
+    def is_variable_name(self, name: str) -> bool:
+        """
+        检查是否为变量名格式
+        
+        Args:
+            name: 名称
+            
+        Returns:
+            是否为变量名
+        """
+        if not name:
+            return False
+        # Python变量: {var_name}
+        if re.match(r'^\{[A-Za-z_]\w*\}$', name):
+            return True
+        # Shell变量: ${var_name} 或 $var_name
+        if re.match(r'^\$\{[A-Za-z_]\w*\}$', name) or re.match(r'^\$[A-Za-z_]\w*$', name):
+            return True
+        return False
+    
+    def contains_variable(self, table_name: str) -> bool:
+        """
+        检查表名是否包含变量
+        
+        Args:
+            table_name: 表名
+            
+        Returns:
+            是否包含变量
+        """
+        # Python变量: {var}
+        if re.search(r'\{[A-Za-z_]\w*\}', table_name):
+            return True
+        # Shell变量: ${var} 或 $var
+        if re.search(r'\$\{?[A-Za-z_]\w*\}?', table_name):
+            return True
+        return False
+    
+    def extract_variables(self, table_name: str) -> List[Dict[str, str]]:
+        """
+        从表名中提取变量信息
+        
+        Args:
+            table_name: 表名（可能包含变量）
+            
+        Returns:
+            变量信息列表，每个元素包含 {"type": "python"|"shell", "name": "var_name", "full": "{var}"}
+        """
+        variables = []
+        matched_positions = set()  # 记录已匹配的位置，避免重复
+        
+        # Shell变量: ${var_name} (优先匹配，因为包含 {})
+        for match in re.finditer(r'\$\{([A-Za-z_]\w*)\}', table_name):
+            variables.append({
+                "type": "shell",
+                "name": match.group(1),
+                "full": match.group(0)
+            })
+            # 记录花括号内容的位置
+            matched_positions.add((match.start() + 1, match.end() - 1))
+        
+        # Shell变量: $var_name (不带花括号)
+        for match in re.finditer(r'\$([A-Za-z_]\w*)(?![\w{])', table_name):
+            # 排除已经匹配的 ${var} 格式
+            if f'${{{match.group(1)}}}' not in table_name:
+                variables.append({
+                    "type": "shell",
+                    "name": match.group(1),
+                    "full": match.group(0)
+                })
+        
+        # Python变量: {var_name} (排除已被 ${var} 匹配的)
+        for match in re.finditer(r'\{([A-Za-z_]\w*)\}', table_name):
+            # 检查是否是 ${var} 的一部分
+            if (match.start(), match.end()) not in matched_positions:
+                # 检查前面是否有 $
+                if match.start() == 0 or table_name[match.start() - 1] != '$':
+                    variables.append({
+                        "type": "python",
+                        "name": match.group(1),
+                        "full": match.group(0)
+                    })
+        
+        return variables
+    
+    def replace_variables(self, table_name: str, var_values: Dict[str, str]) -> str:
+        """
+        替换表名中的变量为实际值
+        
+        Args:
+            table_name: 包含变量的表名
+            var_values: 变量名到值的映射，如 {"schema": "dw", "table": "users"}
+            
+        Returns:
+            替换后的表名
+        """
+        result = table_name
+        
+        for var_name, var_value in var_values.items():
+            # 替换 Shell 变量 ${var_name} (优先处理，避免被 $var 部分匹配)
+            result = result.replace(f'${{{var_name}}}', var_value)
+            # 替换 Shell 变量 $var_name (使用正则确保完整匹配变量名)
+            result = re.sub(rf'\${re.escape(var_name)}(?![\w{{])', var_value, result)
+            # 替换 Python 变量 {var_name}
+            result = result.replace(f'{{{var_name}}}', var_value)
+        
+        return result
+    
     def is_valid_table_name(self, table_name: str) -> bool:
         """
-        验证是否为有效的表名
+        验证是否为有效的表名（包括变量表名）
         
         Args:
             table_name: 表名
@@ -199,6 +309,10 @@ class SQLTableParser:
         
         # 清理表名
         clean_name = self.clean_table_name(table_name)
+        
+        # 如果包含变量，认为是有效的
+        if self.contains_variable(clean_name):
+            return True
         
         # 如果是schema.table格式，只检查table部分
         if '.' in clean_name:
@@ -368,6 +482,7 @@ class SQLTableParser:
         
         result = {}
         all_tables = set()
+        variable_tables = set()  # 包含变量的表名
         
         # 使用各种模式提取表名
         for pattern_name, pattern in self.patterns.items():
@@ -378,9 +493,17 @@ class SQLTableParser:
                 if tables:
                     result[pattern_name] = tables
                     all_tables.update(tables)
+                    # 收集包含变量的表名
+                    for table in tables:
+                        if self.contains_variable(table):
+                            variable_tables.add(table)
         
         # 添加所有表名的汇总
         result['all_tables'] = all_tables
+        
+        # 添加包含变量的表名
+        if variable_tables:
+            result['variable_tables'] = variable_tables
         
         # 添加CTE临时表信息（供参考）
         if cte_names:
@@ -453,6 +576,7 @@ class SQLTableParser:
             'truncate': 'TRUNCATE TABLE',
             'cte': 'WITH (CTE)',
             'cte_tables': 'CTE临时表（已剔除）',
+            'variable_tables': '变量表名',
             # Hive 特有语句类型
             'load_data': 'LOAD DATA (Hive)',
             'msck_repair': 'MSCK REPAIR TABLE (Hive)',
@@ -512,7 +636,8 @@ def main():
     print("\n\n示例2：解析SQL文件")
     print("-" * 60)
     
-    sql_file = "sample_queries.sql"
+    #sql_file = "sample_queries.sql"
+    sql_file = "sample_script.py"
     
     try:
         result = parser.parse_file(sql_file)

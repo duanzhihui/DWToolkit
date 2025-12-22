@@ -3,6 +3,7 @@
 """
 示例Python脚本，包含SQL语句
 用于测试sql_table_parser解析.py文件时能正确过滤Python import语句
+同时演示变量表名的使用场景（Python f-string 格式）
 """
 
 import os
@@ -10,9 +11,19 @@ import sys
 from pathlib import Path
 from typing import List, Dict
 from collections import OrderedDict
+from datetime import datetime
 
 import pandas as pd
 from sqlalchemy import create_engine, text
+
+
+# 变量表名配置 - 用于动态指定schema和表名
+SCHEMA_DW = "dw"
+SCHEMA_ODS = "ods"
+TABLE_USERS = "dim_users"
+TABLE_ORDERS = "fact_orders"
+TABLE_PRODUCTS = "dim_products"
+DATE_SUFFIX = datetime.now().strftime("%Y%m%d")
 
 
 def get_user_orders(engine, user_id: int):
@@ -41,6 +52,40 @@ def get_product_sales(engine):
     return pd.read_sql(sql, engine)
 
 
+def get_user_orders_with_variable_table(engine, user_id: int, schema: str, table_users: str, table_orders: str):
+    """使用变量表名查询用户订单 - Python f-string 格式"""
+    sql = f"""
+    SELECT u.id, u.name, o.order_id, o.amount
+    FROM {schema}.{table_users} u
+    INNER JOIN {schema}.{table_orders} o ON u.id = o.user_id
+    WHERE u.id = :user_id
+    """
+    return pd.read_sql(sql, engine, params={'user_id': user_id})
+
+
+def get_cross_schema_data(engine, ods_schema: str, dw_schema: str, table_name: str):
+    """跨schema查询 - 混合变量和固定表名"""
+    sql = f"""
+    SELECT s.*, t.*
+    FROM {ods_schema}.raw_users s
+    LEFT JOIN {dw_schema}.{table_name} t ON s.id = t.source_id
+    """
+    return pd.read_sql(sql, engine)
+
+
+def create_partition_table(engine, schema: str, table_name: str, date_suffix: str):
+    """动态创建分区表"""
+    sql = f"""
+    CREATE TABLE IF NOT EXISTS {schema}.{table_name}_{date_suffix} (
+        id INT PRIMARY KEY,
+        user_id INT,
+        amount DECIMAL(10,2)
+    )
+    """
+    with engine.connect() as conn:
+        conn.execute(text(sql))
+
+
 def update_inventory(engine, product_id: int, quantity: int):
     """更新库存"""
     sql = """
@@ -50,6 +95,17 @@ def update_inventory(engine, product_id: int, quantity: int):
     """
     with engine.connect() as conn:
         conn.execute(text(sql), {'qty': quantity, 'product_id': product_id})
+
+
+def update_variable_table(engine, schema: str, table_name: str):
+    """使用变量表名更新"""
+    sql = f"""
+    UPDATE {schema}.{table_name}
+    SET updated_at = NOW()
+    WHERE status = 'active'
+    """
+    with engine.connect() as conn:
+        conn.execute(text(sql))
 
 
 def log_action(engine, action: str):
@@ -62,6 +118,17 @@ def log_action(engine, action: str):
         conn.execute(text(sql), {'action': action})
 
 
+def insert_to_variable_table(engine, schema: str, table_name: str):
+    """使用变量表名插入数据"""
+    sql = f"""
+    INSERT INTO {schema}.audit_logs (action, table_name, executed_at)
+    SELECT 'sync', '{table_name}', NOW()
+    FROM dual
+    """
+    with engine.connect() as conn:
+        conn.execute(text(sql))
+
+
 def cleanup_old_data(engine):
     """清理旧数据"""
     sql = """
@@ -71,10 +138,51 @@ def cleanup_old_data(engine):
         conn.execute(text(sql))
 
 
+def delete_from_variable_table(engine, schema: str, table_name: str):
+    """使用变量表名删除数据"""
+    sql = f"""
+    DELETE FROM {schema}.{table_name}
+    WHERE order_date < DATE_SUB(NOW(), INTERVAL 1 YEAR)
+    """
+    with engine.connect() as conn:
+        conn.execute(text(sql))
+
+
+def truncate_variable_table(engine, schema: str, table_name: str):
+    """使用变量表名清空表"""
+    sql = f"""
+    TRUNCATE TABLE {schema}.{table_name}
+    """
+    with engine.connect() as conn:
+        conn.execute(text(sql))
+
+
 if __name__ == '__main__':
     # 创建数据库连接
     engine = create_engine('mysql://user:pass@localhost/mydb')
     
-    # 执行查询
+    # 执行普通查询
     orders = get_user_orders(engine, 1)
     print(orders)
+    
+    # 执行变量表名查询
+    orders_var = get_user_orders_with_variable_table(
+        engine, 1, SCHEMA_DW, TABLE_USERS, TABLE_ORDERS
+    )
+    print(orders_var)
+    
+    # 跨schema查询
+    cross_data = get_cross_schema_data(engine, SCHEMA_ODS, SCHEMA_DW, TABLE_USERS)
+    print(cross_data)
+    
+    # 创建分区表
+    create_partition_table(engine, SCHEMA_DW, TABLE_ORDERS, DATE_SUFFIX)
+    
+    # 更新变量表
+    update_variable_table(engine, SCHEMA_DW, TABLE_PRODUCTS)
+    
+    # 插入到变量表
+    insert_to_variable_table(engine, SCHEMA_DW, TABLE_USERS)
+    
+    # 删除变量表数据
+    delete_from_variable_table(engine, SCHEMA_DW, TABLE_ORDERS)

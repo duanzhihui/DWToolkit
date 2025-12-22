@@ -2,129 +2,66 @@
 SQL表名解析结果
 ============================================================
 
-【所有表名】 (共 39 个)
-  - backup_source
-  - config_table
-  - customers
-  - customers_2023
-  - customers_2024
-  - database_1.users_1
-  - database_2.user_2
-  - db_schema.table_name
-  - departments
-  - dim_customer
-  - dim_product
-  - dwd_order
-  - employees
-  - error_table
-  - event_logs
-  - ext_log_data
-  - fact_sales
-  - local_import_table
-  - logs
-  - metadata_table
-  - ods_order
-  - ods_user
-  - old_backup_table
-  - order_details
+【所有表名】 (共 14 个)
+  - action_logs
+  - dual
+  - inventory
+  - order_items
   - orders
-  - partitioned_events
-  - performance_reviews
   - products
-  - raw_data
-  - restored_table
-  - sales_records
-  - src_user
-  - staging_table
-  - temp_data
-  - temporary_cache
-  - user_actions
-  - user_daily_stats
-  - user_logs
+  - temp_cache
   - users
+  - {dw_schema}.{table_name}
+  - {ods_schema}.raw_users
+  - {schema}.audit_logs
+  - {schema}.{table_name}
+  - {schema}.{table_orders}
+  - {schema}.{table_users}
 
 【按SQL语句类型分类】
 
-SELECT FROM: 19 个表
-  - customers
-  - customers_2023
-  - customers_2024
-  - database_1.users_1
-  - database_2.user_2
-  - db_schema.table_name
-  - departments
-  - employees
-  - error_table
-  - metadata_table
-  - ods_order
-  - performance_reviews
+SELECT FROM: 8 个表
+  - dual
+  - order_items
   - products
-  - raw_data
-  - sales_records
-  - src_user
-  - temp_data
-  - user_actions
+  - temp_cache
   - users
+  - {ods_schema}.raw_users
+  - {schema}.{table_name}
+  - {schema}.{table_users}
 
 JOIN: 3 个表
-  - order_details
   - orders
-  - products
+  - {dw_schema}.{table_name}
+  - {schema}.{table_orders}
 
-INSERT INTO/OVERWRITE: 5 个表
-  - dwd_order
-  - logs
-  - ods_user
-  - user_daily_stats
-  - users
+INSERT INTO/OVERWRITE: 2 个表
+  - action_logs
+  - {schema}.audit_logs
 
-UPDATE: 1 个表
-  - products
+UPDATE: 2 个表
+  - inventory
+  - {schema}.{table_name}
 
-DELETE FROM: 1 个表
-  - temp_data
+DELETE FROM: 2 个表
+  - temp_cache
+  - {schema}.{table_name}
 
-CREATE TABLE: 3 个表
-  - config_table
-  - ext_log_data
-  - user_logs
-
-LOAD DATA (Hive): 2 个表
-  - local_import_table
-  - staging_table
-
-MSCK REPAIR TABLE (Hive): 1 个表
-  - partitioned_events
-
-EXPORT TABLE (Hive): 1 个表
-  - backup_source
-
-IMPORT TABLE (Hive): 1 个表
-  - restored_table
-
-ANALYZE TABLE (Hive): 1 个表
-  - fact_sales
-
-DESCRIBE (Hive): 2 个表
-  - dim_customer
-  - dim_product
-
-SHOW (Hive): 3 个表
-  - config_table
-  - event_logs
-  - metadata_table
-
-DROP TABLE: 1 个表
-  - old_backup_table
-
-ALTER TABLE: 1 个表
-  - users
+CREATE TABLE: 1 个表
+  - {schema}.{table_name}
 
 TRUNCATE TABLE: 1 个表
-  - temporary_cache
+  - {schema}.{table_name}
 
-CTE临时表（已剔除）: 2 个表
-  - daily_agg
+变量表名: 6 个表
+  - {dw_schema}.{table_name}
+  - {ods_schema}.raw_users
+  - {schema}.audit_logs
+  - {schema}.{table_name}
+  - {schema}.{table_orders}
+  - {schema}.{table_users}
+
+CTE临时表（已剔除）: 1 个表
   - sales_summary
 
 ============================================================
