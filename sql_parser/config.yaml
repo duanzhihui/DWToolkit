@@ -1,0 +1,30 @@
+# SQL Parser 配置文件
+# 所有参数都可以通过命令行覆盖
+
+# 输入输出配置
+input_dir: "./input"             # 输入目录路径 (命令行: -i, --input-dir)
+input_file: ""                   # 输入文件路径 (命令行: -f, --input-file)
+output_dir: "./output"           # 输出目录路径 (命令行: -o, --output-dir)
+
+# 递归处理
+recursive: true                  # 是否递归处理子目录 (命令行: --no-recursive)
+
+# 输出控制
+skip_empty: true                 # 无SQL时不生成.sql/.json文件 (命令行: --skip-empty / --no-skip-empty)
+copy_source: true                # 复制输入文件到输出目录方便对比 (命令行: --copy-source / --no-copy-source)
+verbose: false                   # 显示详细输出 (命令行: -v, --verbose)
+
+# 文件/文件夹过滤规则 (支持Unix通配符: *, ?, [seq], [!seq])
+# 包含规则 - 只处理匹配的文件/文件夹，扩展名会从此处自动提取
+include_patterns: ["*.py", "*.sh"]             # 例如: ["*.py", "src/**/*.sql"]
+
+# 排除规则 - 排除匹配的文件/文件夹
+exclude_patterns:                # 例如: ["*_test.py", "__pycache__", ".git"]
+  - __pycache__
+  - .git
+  - .svn
+  - "*.pyc"
+  - "*.pyo"
+  - node_modules
+  - .venv
+  - venv
