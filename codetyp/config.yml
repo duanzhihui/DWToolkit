@@ -1,0 +1,224 @@
+# 代码分类程序配置文件
+# Code Classification Configuration
+
+# 扫描的文件扩展名
+scan_extensions:
+  - ".py"
+  - ".sql"
+  - ".scala"
+  - ".java"
+  - ".sh"
+  - ".hql"
+  - ".hive"
+
+# 文件过滤规则 (Unix通配符格式)
+file_filter:
+  # 包含的文件模式 (如果为空则包含所有)
+  include:
+    - "*.py"
+    - "*.sql"
+    - "*.scala"
+    - "*.java"
+    - "*.sh"
+    - "*.hql"
+  # 排除的文件模式
+  exclude:
+    - "*_test.py"
+    - "test_*.py"
+    - "__pycache__/*"
+    - "*.pyc"
+
+# 输出配置
+output:
+  path: "classification_result.xlsx"
+
+# 分类规则
+classification_rules:
+  hive:
+    description: "Hive SQL及相关调用"
+    priority: 10
+    patterns:
+      # 直接SQL关键字
+      - "\\bCREATE\\s+(EXTERNAL\\s+)?TABLE\\b"
+      - "\\bPARTITIONED\\s+BY\\b"
+      - "\\bSTORED\\s+AS\\s+(ORC|PARQUET|TEXTFILE|AVRO|SEQUENCEFILE)\\b"
+      - "\\bLOCATION\\s+['\"]hdfs://"
+      - "\\bMSCK\\s+REPAIR\\s+TABLE\\b"
+      - "\\bLOAD\\s+DATA\\s+(LOCAL\\s+)?INPATH\\b"
+      - "\\bINSERT\\s+(INTO|OVERWRITE)\\s+TABLE\\b"
+      - "\\bALTER\\s+TABLE\\s+\\w+\\s+ADD\\s+PARTITION\\b"
+      - "\\bSET\\s+hive\\.\\w+"
+      - "\\bUSE\\s+\\w+\\s*;"
+      # Hive函数
+      - "\\bget_json_object\\s*\\("
+      - "\\blateral\\s+view\\s+explode\\b"
+      - "\\bcollect_set\\s*\\("
+      - "\\bcollect_list\\s*\\("
+      - "\\bmap_keys\\s*\\("
+      - "\\bmap_values\\s*\\("
+      - "\\bposexplode\\s*\\("
+      - "\\bstack\\s*\\("
+      # 隐藏调用方式
+      - "hive\\s*\\.\\s*execute"
+      - "hive_client\\s*\\.\\s*query"
+      - "HiveContext"
+      - "hiveql"
+      - "beeline\\s+-e"
+      - "hive\\s+-e\\s+['\"]"
+      - "execute_hive_query"
+      - "run_hive_sql"
+      - "HiveServer2"
+      - "pyhive\\.hive"
+      - "from\\s+pyhive\\s+import\\s+hive"
+      - "impyla.*connect"
+
+  spark:
+    description: "Spark及PySpark代码"
+    priority: 20
+    patterns:
+      # SparkSession/SparkContext
+      - "\\bSparkSession\\b"
+      - "\\bSparkContext\\b"
+      - "\\bSparkConf\\b"
+      - "spark\\s*=\\s*SparkSession"
+      - "sc\\s*=\\s*SparkContext"
+      # DataFrame API
+      - "\\.createDataFrame\\s*\\("
+      - "\\.read\\s*\\.\\s*(csv|json|parquet|orc|jdbc|format)\\s*\\("
+      - "\\.write\\s*\\.\\s*(csv|json|parquet|orc|jdbc|format|mode)\\s*\\("
+      - "\\.select\\s*\\("
+      - "\\.filter\\s*\\("
+      - "\\.groupBy\\s*\\("
+      - "\\.agg\\s*\\("
+      - "\\.join\\s*\\("
+      - "\\.withColumn\\s*\\("
+      - "\\.drop\\s*\\("
+      - "\\.dropDuplicates\\s*\\("
+      - "\\.distinct\\s*\\("
+      - "\\.orderBy\\s*\\("
+      - "\\.repartition\\s*\\("
+      - "\\.coalesce\\s*\\("
+      - "\\.cache\\s*\\("
+      - "\\.persist\\s*\\("
+      # RDD API
+      - "\\.parallelize\\s*\\("
+      - "\\.map\\s*\\("
+      - "\\.flatMap\\s*\\("
+      - "\\.reduceByKey\\s*\\("
+      - "\\.groupByKey\\s*\\("
+      - "\\.sortByKey\\s*\\("
+      - "\\.collect\\s*\\(\\s*\\)"
+      - "\\.saveAsTextFile\\s*\\("
+      # Spark SQL
+      - "spark\\.sql\\s*\\("
+      - "\\.createOrReplaceTempView\\s*\\("
+      - "\\.createTempView\\s*\\("
+      - "\\.registerTempTable\\s*\\("
+      # PySpark imports
+      - "from\\s+pyspark\\b"
+      - "import\\s+pyspark\\b"
+      - "pyspark\\.sql"
+      - "pyspark\\.ml"
+      - "pyspark\\.mllib"
+      - "pyspark\\.streaming"
+      # 隐藏调用方式
+      - "spark-submit"
+      - "spark2-submit"
+      - "SparkSubmit"
+      - "spark\\.jars"
+      - "spark\\.executor"
+      - "spark\\.driver"
+      - "--master\\s+(yarn|local|spark://|mesos://|k8s://)"
+      - "findspark\\.init"
+
+  flink:
+    description: "Flink流处理及批处理代码"
+    priority: 30
+    patterns:
+      # Flink环境
+      - "\\bStreamExecutionEnvironment\\b"
+      - "\\bExecutionEnvironment\\b"
+      - "\\bTableEnvironment\\b"
+      - "\\bStreamTableEnvironment\\b"
+      - "\\bBatchTableEnvironment\\b"
+      - "\\.getExecutionEnvironment\\s*\\("
+      - "\\.createLocalEnvironment\\s*\\("
+      # Flink DataStream API
+      - "\\.addSource\\s*\\("
+      - "\\.addSink\\s*\\("
+      - "\\.keyBy\\s*\\("
+      - "\\.window\\s*\\("
+      - "\\.trigger\\s*\\("
+      - "\\.process\\s*\\("
+      - "\\.timeWindow\\s*\\("
+      - "\\.countWindow\\s*\\("
+      - "\\.assignTimestampsAndWatermarks\\s*\\("
+      - "\\.getSideOutput\\s*\\("
+      # Flink Table API
+      - "\\.executeSql\\s*\\("
+      - "\\.sqlQuery\\s*\\("
+      - "\\.createTemporaryView\\s*\\("
+      # Flink SQL
+      - "CREATE\\s+TABLE.*WITH\\s*\\("
+      - "'connector'\\s*="
+      - "'format'\\s*="
+      - "WATERMARK\\s+FOR\\b"
+      - "TUMBLE\\s*\\("
+      - "HOP\\s*\\("
+      - "SESSION\\s*\\("
+      - "MATCH_RECOGNIZE\\b"
+      # Flink imports
+      - "org\\.apache\\.flink\\b"
+      - "from\\s+pyflink\\b"
+      - "import\\s+pyflink\\b"
+      - "pyflink\\.datastream"
+      - "pyflink\\.table"
+      # Flink connectors
+      - "FlinkKafkaConsumer"
+      - "FlinkKafkaProducer"
+      - "JdbcSink"
+      - "FileSink"
+      - "FileSource"
+      # 隐藏调用方式
+      - "flink\\s+run\\b"
+      - "flink-run"
+      - "FlinkRunner"
+      - "flink\\.execution"
+      - "flink\\.parallelism"
+      - "flink\\.checkpointing"
+      - "state\\.backend"
+      - "checkpoint\\.interval"
+
+  presto:
+    description: "Presto查询"
+    priority: 5
+    patterns:
+      - "\\bpresto\\b.*\\bquery\\b"
+      - "presto://"
+      - "prestodb"
+      - "from\\s+prestodb\\b"
+      - "PrestoClient"
+      - "presto-cli"
+      - "--catalog\\s+\\w+\\s+--schema"
+
+  trino:
+    description: "Trino查询"
+    priority: 5
+    patterns:
+      - "\\btrino\\b.*\\bquery\\b"
+      - "trino://"
+      - "from\\s+trino\\b"
+      - "TrinoClient"
+      - "trino-cli"
+
+  kafka:
+    description: "Kafka消息队列"
+    priority: 5
+    patterns:
+      - "KafkaProducer"
+      - "KafkaConsumer"
+      - "kafka-python"
+      - "from\\s+kafka\\b"
+      - "bootstrap\\.servers"
+      - "kafka://"
+      - "confluent_kafka"
