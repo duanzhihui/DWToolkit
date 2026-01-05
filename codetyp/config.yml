@@ -1,5 +1,10 @@
 # 代码分类程序配置文件
 # Code Classification Configuration
+# 
+# 积分制分类说明:
+# - 每个正则规则可配置积分(score)，匹配时累加
+# - 最终选择积分最高的类型作为代码类型
+# - 只保留互斥规则（各类型独有的特征）
 
 # 扫描的文件扩展名
 scan_extensions:
@@ -13,7 +18,6 @@ scan_extensions:
 
 # 文件过滤规则 (Unix通配符格式)
 file_filter:
-  # 包含的文件模式 (如果为空则包含所有)
   include:
     - "*.py"
     - "*.sql"
@@ -21,7 +25,6 @@ file_filter:
     - "*.java"
     - "*.sh"
     - "*.hql"
-  # 排除的文件模式
   exclude:
     - "*_test.py"
     - "test_*.py"
@@ -32,193 +35,167 @@ file_filter:
 output:
   path: "classification_result.xlsx"
 
-# 分类规则
+# 分类规则 - 只保留互斥规则（各类型独有的特征）
+# 规则格式: {pattern: "正则表达式", score: 积分}
 classification_rules:
   hive:
     description: "Hive SQL及相关调用"
     priority: 10
     patterns:
-      # 直接SQL关键字
-      - "\\bCREATE\\s+(EXTERNAL\\s+)?TABLE\\b"
-      - "\\bPARTITIONED\\s+BY\\b"
-      - "\\bSTORED\\s+AS\\s+(ORC|PARQUET|TEXTFILE|AVRO|SEQUENCEFILE)\\b"
-      - "\\bLOCATION\\s+['\"]hdfs://"
-      - "\\bMSCK\\s+REPAIR\\s+TABLE\\b"
-      - "\\bLOAD\\s+DATA\\s+(LOCAL\\s+)?INPATH\\b"
-      - "\\bINSERT\\s+(INTO|OVERWRITE)\\s+TABLE\\b"
-      - "\\bALTER\\s+TABLE\\s+\\w+\\s+ADD\\s+PARTITION\\b"
-      - "\\bSET\\s+hive\\.\\w+"
-      - "\\bUSE\\s+\\w+\\s*;"
-      # Hive函数
-      - "\\bget_json_object\\s*\\("
-      - "\\blateral\\s+view\\s+explode\\b"
-      - "\\bcollect_set\\s*\\("
-      - "\\bcollect_list\\s*\\("
-      - "\\bmap_keys\\s*\\("
-      - "\\bmap_values\\s*\\("
-      - "\\bposexplode\\s*\\("
-      - "\\bstack\\s*\\("
-      # 隐藏调用方式
-      - "hive\\s*\\.\\s*execute"
-      - "hive_client\\s*\\.\\s*query"
-      - "HiveContext"
-      - "hiveql"
-      - "beeline\\s+-e"
-      - "hive\\s+-e\\s+['\"]"
-      - "execute_hive_query"
-      - "run_hive_sql"
-      - "HiveServer2"
-      - "pyhive\\.hive"
-      - "from\\s+pyhive\\s+import\\s+hive"
-      - "impyla.*connect"
+      # Hive独有SQL关键字
+      - {pattern: "\\bPARTITIONED\\s+BY\\b", score: 10}
+      - {pattern: "\\bSTORED\\s+AS\\s+(ORC|PARQUET|TEXTFILE|AVRO|SEQUENCEFILE)\\b", score: 10}
+      - {pattern: "\\bLOCATION\\s+['\"]hdfs://", score: 8}
+      - {pattern: "\\bMSCK\\s+REPAIR\\s+TABLE\\b", score: 15}
+      - {pattern: "\\bLOAD\\s+DATA\\s+(LOCAL\\s+)?INPATH\\b", score: 10}
+      - {pattern: "\\bSET\\s+hive\\.\\w+", score: 15}
+      # Hive独有函数
+      - {pattern: "\\bget_json_object\\s*\\(", score: 10}
+      - {pattern: "\\blateral\\s+view\\s+explode\\b", score: 12}
+      - {pattern: "\\bcollect_set\\s*\\(", score: 8}
+      - {pattern: "\\bcollect_list\\s*\\(", score: 8}
+      - {pattern: "\\bposexplode\\s*\\(", score: 10}
+      # Hive独有调用方式
+      - {pattern: "HiveContext", score: 15}
+      - {pattern: "hiveql", score: 12}
+      - {pattern: "beeline\\s+-e", score: 15}
+      - {pattern: "hive\\s+-e\\s+['\"]", score: 15}
+      - {pattern: "execute_hive_query", score: 12}
+      - {pattern: "run_hive_sql", score: 12}
+      - {pattern: "HiveServer2", score: 15}
+      - {pattern: "pyhive\\.hive", score: 15}
+      - {pattern: "from\\s+pyhive\\s+import\\s+hive", score: 15}
+      - {pattern: "impyla.*connect", score: 10}
 
   spark:
     description: "Spark及PySpark代码"
     priority: 20
     patterns:
-      # SparkSession/SparkContext
-      - "\\bSparkSession\\b"
-      - "\\bSparkContext\\b"
-      - "\\bSparkConf\\b"
-      - "spark\\s*=\\s*SparkSession"
-      - "sc\\s*=\\s*SparkContext"
-      # DataFrame API
-      - "\\.createDataFrame\\s*\\("
-      - "\\.read\\s*\\.\\s*(csv|json|parquet|orc|jdbc|format)\\s*\\("
-      - "\\.write\\s*\\.\\s*(csv|json|parquet|orc|jdbc|format|mode)\\s*\\("
-      - "\\.select\\s*\\("
-      - "\\.filter\\s*\\("
-      - "\\.groupBy\\s*\\("
-      - "\\.agg\\s*\\("
-      - "\\.join\\s*\\("
-      - "\\.withColumn\\s*\\("
-      - "\\.drop\\s*\\("
-      - "\\.dropDuplicates\\s*\\("
-      - "\\.distinct\\s*\\("
-      - "\\.orderBy\\s*\\("
-      - "\\.repartition\\s*\\("
-      - "\\.coalesce\\s*\\("
-      - "\\.cache\\s*\\("
-      - "\\.persist\\s*\\("
-      # RDD API
-      - "\\.parallelize\\s*\\("
-      - "\\.map\\s*\\("
-      - "\\.flatMap\\s*\\("
-      - "\\.reduceByKey\\s*\\("
-      - "\\.groupByKey\\s*\\("
-      - "\\.sortByKey\\s*\\("
-      - "\\.collect\\s*\\(\\s*\\)"
-      - "\\.saveAsTextFile\\s*\\("
-      # Spark SQL
-      - "spark\\.sql\\s*\\("
-      - "\\.createOrReplaceTempView\\s*\\("
-      - "\\.createTempView\\s*\\("
-      - "\\.registerTempTable\\s*\\("
-      # PySpark imports
-      - "from\\s+pyspark\\b"
-      - "import\\s+pyspark\\b"
-      - "pyspark\\.sql"
-      - "pyspark\\.ml"
-      - "pyspark\\.mllib"
-      - "pyspark\\.streaming"
-      # 隐藏调用方式
-      - "spark-submit"
-      - "spark2-submit"
-      - "SparkSubmit"
-      - "spark\\.jars"
-      - "spark\\.executor"
-      - "spark\\.driver"
-      - "--master\\s+(yarn|local|spark://|mesos://|k8s://)"
-      - "findspark\\.init"
+      # Spark独有核心类
+      - {pattern: "\\bSparkSession\\b", score: 20}
+      - {pattern: "\\bSparkContext\\b", score: 20}
+      - {pattern: "\\bSparkConf\\b", score: 15}
+      - {pattern: "spark\\s*=\\s*SparkSession", score: 20}
+      - {pattern: "sc\\s*=\\s*SparkContext", score: 20}
+      # Spark独有DataFrame API
+      - {pattern: "\\.createDataFrame\\s*\\(", score: 15}
+      - {pattern: "\\.read\\s*\\.\\s*(csv|json|parquet|orc|jdbc|format)\\s*\\(", score: 12}
+      - {pattern: "\\.write\\s*\\.\\s*(csv|json|parquet|orc|jdbc|format|mode)\\s*\\(", score: 12}
+      - {pattern: "\\.withColumn\\s*\\(", score: 10}
+      - {pattern: "\\.dropDuplicates\\s*\\(", score: 8}
+      - {pattern: "\\.repartition\\s*\\(", score: 8}
+      - {pattern: "\\.coalesce\\s*\\(", score: 8}
+      - {pattern: "\\.cache\\s*\\(", score: 8}
+      - {pattern: "\\.persist\\s*\\(", score: 8}
+      # Spark独有RDD API
+      - {pattern: "\\.parallelize\\s*\\(", score: 12}
+      - {pattern: "\\.reduceByKey\\s*\\(", score: 12}
+      - {pattern: "\\.groupByKey\\s*\\(", score: 10}
+      - {pattern: "\\.sortByKey\\s*\\(", score: 10}
+      - {pattern: "\\.saveAsTextFile\\s*\\(", score: 10}
+      # Spark SQL独有
+      - {pattern: "spark\\.sql\\s*\\(", score: 15}
+      - {pattern: "\\.createOrReplaceTempView\\s*\\(", score: 12}
+      - {pattern: "\\.createTempView\\s*\\(", score: 10}
+      - {pattern: "\\.registerTempTable\\s*\\(", score: 10}
+      # PySpark独有imports
+      - {pattern: "from\\s+pyspark\\b", score: 20}
+      - {pattern: "import\\s+pyspark\\b", score: 20}
+      - {pattern: "pyspark\\.sql", score: 15}
+      - {pattern: "pyspark\\.ml", score: 15}
+      - {pattern: "pyspark\\.mllib", score: 15}
+      - {pattern: "pyspark\\.streaming", score: 15}
+      # Spark独有调用方式
+      - {pattern: "spark-submit", score: 20}
+      - {pattern: "spark2-submit", score: 20}
+      - {pattern: "SparkSubmit", score: 15}
+      - {pattern: "spark\\.jars", score: 10}
+      - {pattern: "spark\\.executor", score: 12}
+      - {pattern: "spark\\.driver", score: 12}
+      - {pattern: "--master\\s+(yarn|local|spark://|mesos://|k8s://)", score: 15}
+      - {pattern: "findspark\\.init", score: 15}
 
   flink:
     description: "Flink流处理及批处理代码"
     priority: 30
     patterns:
-      # Flink环境
-      - "\\bStreamExecutionEnvironment\\b"
-      - "\\bExecutionEnvironment\\b"
-      - "\\bTableEnvironment\\b"
-      - "\\bStreamTableEnvironment\\b"
-      - "\\bBatchTableEnvironment\\b"
-      - "\\.getExecutionEnvironment\\s*\\("
-      - "\\.createLocalEnvironment\\s*\\("
-      # Flink DataStream API
-      - "\\.addSource\\s*\\("
-      - "\\.addSink\\s*\\("
-      - "\\.keyBy\\s*\\("
-      - "\\.window\\s*\\("
-      - "\\.trigger\\s*\\("
-      - "\\.process\\s*\\("
-      - "\\.timeWindow\\s*\\("
-      - "\\.countWindow\\s*\\("
-      - "\\.assignTimestampsAndWatermarks\\s*\\("
-      - "\\.getSideOutput\\s*\\("
-      # Flink Table API
-      - "\\.executeSql\\s*\\("
-      - "\\.sqlQuery\\s*\\("
-      - "\\.createTemporaryView\\s*\\("
-      # Flink SQL
-      - "CREATE\\s+TABLE.*WITH\\s*\\("
-      - "'connector'\\s*="
-      - "'format'\\s*="
-      - "WATERMARK\\s+FOR\\b"
-      - "TUMBLE\\s*\\("
-      - "HOP\\s*\\("
-      - "SESSION\\s*\\("
-      - "MATCH_RECOGNIZE\\b"
-      # Flink imports
-      - "org\\.apache\\.flink\\b"
-      - "from\\s+pyflink\\b"
-      - "import\\s+pyflink\\b"
-      - "pyflink\\.datastream"
-      - "pyflink\\.table"
-      # Flink connectors
-      - "FlinkKafkaConsumer"
-      - "FlinkKafkaProducer"
-      - "JdbcSink"
-      - "FileSink"
-      - "FileSource"
-      # 隐藏调用方式
-      - "flink\\s+run\\b"
-      - "flink-run"
-      - "FlinkRunner"
-      - "flink\\.execution"
-      - "flink\\.parallelism"
-      - "flink\\.checkpointing"
-      - "state\\.backend"
-      - "checkpoint\\.interval"
+      # Flink独有环境类
+      - {pattern: "\\bStreamExecutionEnvironment\\b", score: 25}
+      - {pattern: "\\bExecutionEnvironment\\b", score: 20}
+      - {pattern: "\\bTableEnvironment\\b", score: 20}
+      - {pattern: "\\bStreamTableEnvironment\\b", score: 25}
+      - {pattern: "\\bBatchTableEnvironment\\b", score: 20}
+      - {pattern: "\\.getExecutionEnvironment\\s*\\(", score: 20}
+      - {pattern: "\\.createLocalEnvironment\\s*\\(", score: 15}
+      # Flink独有DataStream API
+      - {pattern: "\\.addSource\\s*\\(", score: 15}
+      - {pattern: "\\.addSink\\s*\\(", score: 15}
+      - {pattern: "\\.keyBy\\s*\\(", score: 12}
+      - {pattern: "\\.timeWindow\\s*\\(", score: 15}
+      - {pattern: "\\.countWindow\\s*\\(", score: 15}
+      - {pattern: "\\.assignTimestampsAndWatermarks\\s*\\(", score: 18}
+      - {pattern: "\\.getSideOutput\\s*\\(", score: 12}
+      # Flink独有Table API
+      - {pattern: "\\.executeSql\\s*\\(", score: 15}
+      - {pattern: "\\.sqlQuery\\s*\\(", score: 12}
+      - {pattern: "\\.createTemporaryView\\s*\\(", score: 10}
+      # Flink独有SQL语法
+      - {pattern: "'connector'\\s*=", score: 15}
+      - {pattern: "'format'\\s*=", score: 10}
+      - {pattern: "WATERMARK\\s+FOR\\b", score: 20}
+      - {pattern: "TUMBLE\\s*\\(", score: 18}
+      - {pattern: "HOP\\s*\\(", score: 18}
+      - {pattern: "SESSION\\s*\\(", score: 18}
+      - {pattern: "MATCH_RECOGNIZE\\b", score: 20}
+      # Flink独有imports
+      - {pattern: "org\\.apache\\.flink\\b", score: 25}
+      - {pattern: "from\\s+pyflink\\b", score: 25}
+      - {pattern: "import\\s+pyflink\\b", score: 25}
+      - {pattern: "pyflink\\.datastream", score: 20}
+      - {pattern: "pyflink\\.table", score: 20}
+      # Flink独有connectors
+      - {pattern: "FlinkKafkaConsumer", score: 20}
+      - {pattern: "FlinkKafkaProducer", score: 20}
+      - {pattern: "JdbcSink", score: 15}
+      - {pattern: "FileSink", score: 12}
+      - {pattern: "FileSource", score: 12}
+      # Flink独有调用方式
+      - {pattern: "flink\\s+run\\b", score: 20}
+      - {pattern: "flink-run", score: 15}
+      - {pattern: "FlinkRunner", score: 15}
+      - {pattern: "flink\\.execution", score: 12}
+      - {pattern: "flink\\.parallelism", score: 12}
+      - {pattern: "flink\\.checkpointing", score: 15}
+      - {pattern: "state\\.backend", score: 12}
+      - {pattern: "checkpoint\\.interval", score: 12}
 
   presto:
     description: "Presto查询"
     priority: 5
     patterns:
-      - "\\bpresto\\b.*\\bquery\\b"
-      - "presto://"
-      - "prestodb"
-      - "from\\s+prestodb\\b"
-      - "PrestoClient"
-      - "presto-cli"
-      - "--catalog\\s+\\w+\\s+--schema"
+      - {pattern: "\\bpresto\\b.*\\bquery\\b", score: 15}
+      - {pattern: "presto://", score: 20}
+      - {pattern: "prestodb", score: 20}
+      - {pattern: "from\\s+prestodb\\b", score: 20}
+      - {pattern: "PrestoClient", score: 20}
+      - {pattern: "presto-cli", score: 15}
+      - {pattern: "--catalog\\s+\\w+\\s+--schema", score: 10}
 
   trino:
     description: "Trino查询"
     priority: 5
     patterns:
-      - "\\btrino\\b.*\\bquery\\b"
-      - "trino://"
-      - "from\\s+trino\\b"
-      - "TrinoClient"
-      - "trino-cli"
+      - {pattern: "\\btrino\\b.*\\bquery\\b", score: 15}
+      - {pattern: "trino://", score: 20}
+      - {pattern: "from\\s+trino\\b", score: 20}
+      - {pattern: "TrinoClient", score: 20}
+      - {pattern: "trino-cli", score: 15}
 
   kafka:
     description: "Kafka消息队列"
     priority: 5
     patterns:
-      - "KafkaProducer"
-      - "KafkaConsumer"
-      - "kafka-python"
-      - "from\\s+kafka\\b"
-      - "bootstrap\\.servers"
-      - "kafka://"
-      - "confluent_kafka"
+      - {pattern: "from\\s+kafka\\b", score: 20}
+      - {pattern: "kafka-python", score: 15}
+      - {pattern: "kafka://", score: 15}
+      - {pattern: "confluent_kafka", score: 20}
