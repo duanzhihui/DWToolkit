@@ -1,0 +1,69 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "airflowupdt"
+version = "0.1.0"
+description = "Airflow 2.x to 3.x DAG 升级工具"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+authors = [
+    {name = "DWToolkit"}
+]
+keywords = ["airflow", "dag", "migration", "upgrade", "etl"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Code Generators",
+    "Topic :: Software Development :: Quality Assurance",
+]
+dependencies = [
+    "click>=8.0.0",
+    "ruff>=0.1.0",
+    "flake8>=6.0.0",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "flake8-bugbear>=23.0.0",
+    "flake8-comprehensions>=3.10.0",
+]
+
+[project.scripts]
+airflowupdt = "airflowupdt.cli.main:main"
+
+[project.urls]
+Homepage = "https://github.com/DWToolkit/airflowupdt"
+Repository = "https://github.com/DWToolkit/airflowupdt"
+Documentation = "https://github.com/DWToolkit/airflowupdt#readme"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["airflowupdt*"]
+
+[tool.ruff]
+target-version = "py39"
+line-length = 120
+select = ["AIR", "E", "F", "I", "W", "UP", "B", "C4", "SIM"]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["airflowupdt"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = "-v --cov=airflowupdt --cov-report=term-missing"
