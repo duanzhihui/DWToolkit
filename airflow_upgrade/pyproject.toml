@@ -50,7 +50,7 @@ Repository = "https://github.com/DWToolkit/airflow-upgrade"
 Documentation = "https://github.com/DWToolkit/airflow-upgrade#readme"
 
 [tool.setuptools.packages.find]
-where = ["."]
+where = [".."]
 include = ["airflow_upgrade*"]
 
 [tool.ruff]

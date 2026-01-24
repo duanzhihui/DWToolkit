@@ -507,7 +507,8 @@ def print_validation_result(result, score):
     # 评分
     grade_colors = {'A': 'green', 'B': 'green', 'C': 'yellow', 'D': 'yellow', 'F': 'red'}
     grade = score['grade']
-    click.echo(f"\n兼容性评分: {click.style(f'{score['score']}/100 ({grade})', fg=grade_colors.get(grade, 'white'))}")
+    score_value = score['score']
+    click.echo(f"\n兼容性评分: {click.style(f'{score_value}/100 ({grade})', fg=grade_colors.get(grade, 'white'))}")
     
     click.echo(f"\n问题统计:")
     click.echo(f"  错误: {score['errors']}")
