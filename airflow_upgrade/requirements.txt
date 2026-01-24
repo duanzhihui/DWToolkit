@@ -1,0 +1,20 @@
+# AirflowUpgrade 依赖
+# Python >= 3.9
+
+# 命令行接口
+click>=8.0.0
+
+# 代码质量检查工具
+ruff>=0.1.0
+flake8>=6.0.0
+
+# 配置文件解析
+pyyaml>=6.0
+
+# 可选: Flake8 插件
+flake8-bugbear>=23.0.0
+flake8-comprehensions>=3.10.0
+
+# 开发依赖
+pytest>=7.0.0
+pytest-cov>=4.0.0
