@@ -26,7 +26,8 @@ class SQLTableParser:
         PY_VAR = r'\{[A-Za-z_]\w*\}'            # Python: {var_name}
         SH_VAR = r'(?:\$\{[A-Za-z_]\w*\}|\$[A-Za-z_]\w*)'  # Shell: ${var} 或 $var
         PART = rf'(?:{IDENT}|{PY_VAR}|{SH_VAR})'  # 单段：标识符或变量
-        self.table_pattern = rf'(?:{PART})(?:\.(?:{PART}))?'
+        #self.table_pattern = rf'(?:{PART})(?:\.(?:{PART}))?'
+        self.table_pattern = rf'(?:{PART})(?:\.(?:{PART}))'
         
         # 匹配单个CTE名称的正则表达式 (参考 cte_parser.py)
         self.single_cte_pattern = re.compile(
