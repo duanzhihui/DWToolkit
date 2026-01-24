@@ -1,0 +1,60 @@
+# airflow_upgrade 配置文件
+# https://github.com/duanzhihui/DWToolkit/airflow_upgrade
+
+# 目标 Airflow 版本
+target_version: "3.0"
+
+# 备份设置
+backup:
+  enabled: true
+  directory: ".airflow_upgrade_backup"
+  keep_count: 5
+
+# 代码质量检查
+quality_checks:
+  ruff:
+    enabled: true
+    auto_fix: false
+    line_length: 120
+    rules:
+      - "AIR"
+      - "E"
+      - "F"
+      - "I"
+      - "W"
+    ignore:
+      - "E501"
+  
+  flake8:
+    enabled: true
+    max_line_length: 120
+    max_complexity: 10
+    ignore:
+      - "E501"
+      - "W503"
+
+# 升级规则
+upgrade_rules:
+  # 导入迁移
+  import_migration: true
+  # 操作符弃用处理
+  operator_deprecation: true
+  # 配置更新
+  config_update: true
+  # 参数重命名
+  param_rename: true
+
+# 排除模式
+exclude_patterns:
+  - "__pycache__"
+  - ".git"
+  - "test_*"
+  - "*_test.py"
+  - ".venv"
+  - "venv"
+
+# 输出设置
+output:
+  format: "text"  # text 或 json
+  verbose: false
+  color: true

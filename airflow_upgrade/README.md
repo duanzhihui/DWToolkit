@@ -109,6 +109,38 @@ airflow-upgrade init-config -o my_config.yml
 
 ## 配置文件
 
+### 创建配置文件
+
+使用 `init-config` 命令生成默认配置文件：
+
+```bash
+# 生成默认配置文件 .airflow_upgrade.yml
+airflow-upgrade init-config
+
+# 指定配置文件路径
+airflow-upgrade init-config -o my_config.yml
+```
+
+### 使用配置文件
+
+工具会自动查找以下配置文件（按优先级）：
+1. `.airflow_upgrade.yml`
+2. `.airflow_upgrade.yaml`
+3. `airflow_upgrade.yml`
+4. `airflow_upgrade.yaml`
+
+或者使用 `--config` 选项指定配置文件：
+
+```bash
+# 使用指定的配置文件
+airflow-upgrade --config my_config.yml upgrade my_dag.py
+
+# 配置文件中的设置会作为默认值，命令行参数会覆盖配置文件
+airflow-upgrade --config my_config.yml upgrade my_dag.py --target-version 3.1
+```
+
+### 配置文件示例
+
 创建 `.airflow_upgrade.yml` 配置文件：
 
 ```yaml
@@ -118,7 +150,7 @@ target_version: "3.0"
 # 备份设置
 backup:
   enabled: true
-  directory: ".airflowupdt_backup"
+  directory: ".airflow_upgrade_backup"
   keep_count: 5
 
 # 代码质量检查
@@ -127,18 +159,54 @@ quality_checks:
     enabled: true
     auto_fix: false
     line_length: 120
+    rules:
+      - "AIR"
+      - "E"
+      - "F"
+      - "I"
+      - "W"
+    ignore:
+      - "E501"
+  
   flake8:
     enabled: true
     max_line_length: 120
     max_complexity: 10
+    ignore:
+      - "E501"
+      - "W503"
 
 # 升级规则
 upgrade_rules:
+  # 导入迁移
   import_migration: true
+  # 操作符弃用处理
   operator_deprecation: true
+  # 配置更新
   config_update: true
+  # 参数重命名
   param_rename: true
+
+# 排除模式
+exclude_patterns:
+  - "__pycache__"
+  - ".git"
+  - "test_*"
+  - "*_test.py"
+  - ".venv"
+  - "venv"
+
+# 输出设置
+output:
+  format: "text"  # text 或 json
+  verbose: false
+  color: true
 ```
+
+**配置说明**：
+- 命令行参数优先级高于配置文件
+- 如果未指定配置文件且当前目录没有配置文件，将使用默认值
+- 配置文件支持 YAML 格式
 
 ## 主要升级规则
 

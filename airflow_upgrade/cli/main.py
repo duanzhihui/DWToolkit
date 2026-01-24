@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-AirflowUpdt 命令行接口
+airflow_upgrade 命令行接口
 """
 
 import json
@@ -10,6 +10,7 @@ from typing import Optional
 
 import click
 
+from airflow_upgrade.core.config_loader import ConfigLoader
 from airflow_upgrade.core.migrator import DAGMigrator, MigrationReport, BatchMigrationReport
 from airflow_upgrade.core.parser import DAGParser
 from airflow_upgrade.core.validator import DAGValidator
@@ -22,7 +23,7 @@ def print_banner():
     """打印工具横幅"""
     banner = """
 ╔═══════════════════════════════════════════════════════════╗
-║        AirflowUpgrade - DAG 升级工具 v0.1.0              ║
+║        AirflowUpgrade - DAG 升级工具 v0.1.0               ║
 ║        Airflow 2.x → 3.x 自动化迁移工具                   ║
 ╚═══════════════════════════════════════════════════════════╝
 """
@@ -31,23 +32,31 @@ def print_banner():
 
 @click.group()
 @click.version_option(version='0.1.0', prog_name='airflow-upgrade')
-def cli():
+@click.option('--config', '-c', type=click.Path(exists=True), help='配置文件路径')
+@click.pass_context
+def cli(ctx, config):
     """AirflowUpgrade - Airflow DAG 升级工具
     
     将 Airflow 2.x DAG 文件自动升级到 Airflow 3.x 兼容版本
     """
-    pass
+    # 确保 context 对象存在
+    ctx.ensure_object(dict)
+    # 加载配置文件
+    ctx.obj['config'] = ConfigLoader.load(config)
+    if config:
+        click.echo(f"📋 使用配置文件: {config}")
 
 
 @cli.command()
 @click.argument('file_path', type=click.Path(exists=True))
-@click.option('--target-version', '-t', default='3.0', help='目标 Airflow 版本')
-@click.option('--backup/--no-backup', default=True, help='是否创建备份')
+@click.option('--target-version', '-t', default=None, help='目标 Airflow 版本')
+@click.option('--backup/--no-backup', default=None, help='是否创建备份')
 @click.option('--backup-dir', type=click.Path(), help='备份目录')
 @click.option('--dry-run', is_flag=True, help='仅分析,不实际修改')
 @click.option('--output', '-o', type=click.Path(), help='输出文件路径')
-@click.option('--format', 'output_format', type=click.Choice(['text', 'json']), default='text', help='输出格式')
-def upgrade(file_path, target_version, backup, backup_dir, dry_run, output, output_format):
+@click.option('--format', 'output_format', type=click.Choice(['text', 'json']), default=None, help='输出格式')
+@click.pass_context
+def upgrade(ctx, file_path, target_version, backup, backup_dir, dry_run, output, output_format):
     """升级单个 DAG 文件
     
     示例:
@@ -56,6 +65,17 @@ def upgrade(file_path, target_version, backup, backup_dir, dry_run, output, outp
         airflow-upgrade upgrade my_dag.py --dry-run
     """
     print_banner()
+    
+    # 从配置文件获取默认值
+    config = ctx.obj.get('config')
+    if target_version is None:
+        target_version = config.get_target_version() if config else '3.0'
+    if backup is None:
+        backup = config.get_backup_enabled() if config else True
+    if backup_dir is None:
+        backup_dir = config.get_backup_directory() if config else None
+    if output_format is None:
+        output_format = config.get_output_format() if config else 'text'
     
     click.echo(f"📁 文件: {file_path}")
     click.echo(f"🎯 目标版本: Airflow {target_version}")
@@ -87,15 +107,16 @@ def upgrade(file_path, target_version, backup, backup_dir, dry_run, output, outp
 
 @cli.command('upgrade-dir')
 @click.argument('directory', type=click.Path(exists=True))
-@click.option('--target-version', '-t', default='3.0', help='目标 Airflow 版本')
+@click.option('--target-version', '-t', default=None, help='目标 Airflow 版本')
 @click.option('--recursive/--no-recursive', '-r', default=True, help='是否递归处理子目录')
-@click.option('--backup/--no-backup', default=True, help='是否创建备份')
+@click.option('--backup/--no-backup', default=None, help='是否创建备份')
 @click.option('--backup-dir', type=click.Path(), help='备份目录')
 @click.option('--dry-run', is_flag=True, help='仅分析,不实际修改')
 @click.option('--pattern', default='*.py', help='文件匹配模式')
 @click.option('--output', '-o', type=click.Path(), help='输出报告路径')
-@click.option('--format', 'output_format', type=click.Choice(['text', 'json']), default='text', help='输出格式')
-def upgrade_dir(directory, target_version, recursive, backup, backup_dir, dry_run, pattern, output, output_format):
+@click.option('--format', 'output_format', type=click.Choice(['text', 'json']), default=None, help='输出格式')
+@click.pass_context
+def upgrade_dir(ctx, directory, target_version, recursive, backup, backup_dir, dry_run, pattern, output, output_format):
     """批量升级目录中的 DAG 文件
     
     示例:
@@ -104,6 +125,17 @@ def upgrade_dir(directory, target_version, recursive, backup, backup_dir, dry_ru
         airflow-upgrade upgrade-dir /dags/ --pattern "dag_*.py"
     """
     print_banner()
+    
+    # 从配置文件获取默认值
+    config = ctx.obj.get('config')
+    if target_version is None:
+        target_version = config.get_target_version() if config else '3.0'
+    if backup is None:
+        backup = config.get_backup_enabled() if config else True
+    if backup_dir is None:
+        backup_dir = config.get_backup_directory() if config else None
+    if output_format is None:
+        output_format = config.get_output_format() if config else 'text'
     
     click.echo(f"📁 目录: {directory}")
     click.echo(f"🎯 目标版本: Airflow {target_version}")
@@ -185,9 +217,10 @@ def analyze(file_path, output_format):
 
 @cli.command()
 @click.argument('file_path', type=click.Path(exists=True))
-@click.option('--target-version', '-t', default='3.0', help='目标 Airflow 版本')
-@click.option('--format', 'output_format', type=click.Choice(['text', 'json']), default='text', help='输出格式')
-def validate(file_path, target_version, output_format):
+@click.option('--target-version', '-t', default=None, help='目标 Airflow 版本')
+@click.option('--format', 'output_format', type=click.Choice(['text', 'json']), default=None, help='输出格式')
+@click.pass_context
+def validate(ctx, file_path, target_version, output_format):
     """验证 DAG 文件的 Airflow 3.x 兼容性
     
     示例:
@@ -195,6 +228,13 @@ def validate(file_path, target_version, output_format):
         airflow-upgrade validate my_dag.py --format json
     """
     print_banner()
+    
+    # 从配置文件获取默认值
+    config = ctx.obj.get('config')
+    if target_version is None:
+        target_version = config.get_target_version() if config else '3.0'
+    if output_format is None:
+        output_format = config.get_output_format() if config else 'text'
     
     click.echo(f"📁 验证文件: {file_path}")
     click.echo(f"🎯 目标版本: Airflow {target_version}")
@@ -223,9 +263,10 @@ def validate(file_path, target_version, output_format):
 @cli.command()
 @click.argument('file_path', type=click.Path(exists=True))
 @click.option('--fix', is_flag=True, help='自动修复问题')
-@click.option('--tools', default='ruff,flake8', help='使用的检查工具 (逗号分隔)')
-@click.option('--format', 'output_format', type=click.Choice(['text', 'json']), default='text', help='输出格式')
-def lint(file_path, fix, tools, output_format):
+@click.option('--tools', default=None, help='使用的检查工具 (逗号分隔)')
+@click.option('--format', 'output_format', type=click.Choice(['text', 'json']), default=None, help='输出格式')
+@click.pass_context
+def lint(ctx, file_path, fix, tools, output_format):
     """代码质量检查
     
     示例:
@@ -234,6 +275,19 @@ def lint(file_path, fix, tools, output_format):
         airflow-upgrade lint my_dag.py --tools ruff
     """
     print_banner()
+    
+    # 从配置文件获取默认值
+    config = ctx.obj.get('config')
+    if tools is None:
+        # 根据配置文件决定启用哪些工具
+        enabled_tools = []
+        if config and config.get_ruff_enabled():
+            enabled_tools.append('ruff')
+        if config and config.get_flake8_enabled():
+            enabled_tools.append('flake8')
+        tools = ','.join(enabled_tools) if enabled_tools else 'ruff,flake8'
+    if output_format is None:
+        output_format = config.get_output_format() if config else 'text'
     
     click.echo(f"📁 检查文件: {file_path}")
     click.echo(f"🔧 工具: {tools}")
@@ -317,7 +371,7 @@ def rollback(backup_path, original_path):
 
 
 @cli.command('init-config')
-@click.option('--output', '-o', type=click.Path(), default='.airflowupdt.yml', help='配置文件路径')
+@click.option('--output', '-o', type=click.Path(), default='.airflow_upgrade.yml', help='配置文件路径')
 def init_config(output):
     """生成默认配置文件
     
@@ -325,8 +379,8 @@ def init_config(output):
         airflow-upgrade init-config
         airflow-upgrade init-config -o config.yml
     """
-    config_content = """# AirflowUpdt 配置文件
-# https://github.com/DWToolkit/airflowupdt
+    config_content = """# airflow_upgrade 配置文件
+# https://github.com/duanzhihui/DWToolkit/airflow_upgrade
 
 # 目标 Airflow 版本
 target_version: "3.0"
