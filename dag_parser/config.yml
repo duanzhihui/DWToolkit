@@ -1,0 +1,56 @@
+# dag_parser 配置文件
+# Airflow DAG文件解析工具配置
+
+# 输入配置
+input:
+  # DAG文件路径,可以是文件或目录
+  dag_path: "./dags/"
+  
+  # 文件扩展名过滤
+  file_extensions:
+    - ".py"
+  
+  # 是否递归搜索子目录
+  recursive: true
+
+# 输出配置
+output:
+  # 输出Excel文件路径
+  excel_file: "dag_parse_result.xlsx"
+  
+  # 输出sheet名称
+  sheet_name: "DAG任务信息"
+  
+  # 输出字段配置
+  columns:
+    - dag_path      # DAG文件目录
+    - dag_file      # DAG文件名
+    - dag_id        # DAG ID
+    - task_id       # 任务ID
+    - command       # 任务命令
+    - command_dir   # 命令中的目录
+    - command_file  # 命令执行的文件
+
+# 解析配置
+parse:
+  # 是否解析变量
+  resolve_variables: true
+  
+  # 是否提取环境变量
+  extract_env_vars: true
+  
+  # 支持的任务类型
+  task_types:
+    - BashOperator
+    - PythonOperator
+    - SparkSubmitOperator
+    - SSHOperator
+    - DummyOperator
+  
+  # 命令解析规则
+  command_patterns:
+    # cd目录的正则模式
+    cd_pattern: 'cd\s+([^\s;&|]+)'
+    
+    # 脚本文件的正则模式
+    script_pattern: '([^\s;&|]+\.(py|sh))(?:\s|$|;|&|\|)'
