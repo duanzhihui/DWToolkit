@@ -1,0 +1,18 @@
+upgrade:
+  target_version: "3.2"
+  dry_run: false
+  parallel_jobs: 4
+  file_pattern: "*.py"
+
+backup:
+  enabled: true
+  directory: ".spark_upgrade_backup"
+  retention_days: 30
+
+quality:
+  enabled: true
+  ruff_config: "pyproject.toml"
+  auto_fix: false
+  fail_on_error: false
+
+custom_rules: {}
