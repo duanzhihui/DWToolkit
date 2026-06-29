@@ -18,7 +18,7 @@ connections:
     
   conn_oracle_1:
     type: oracle
-    conn_str: "oracle+cx_oracle://user:password@(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=192.168.1.1)(PORT=1521)))(CONNECT_DATA=(SERVICE_NAME=SID)))"
+    conn_str: "oracle+oracledb://user:password@(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=192.168.1.1)(PORT=1521)))(CONNECT_DATA=(SERVICE_NAME=SID)))"
     description: "Oracle开发环境"
 
   conn_impala_1:
